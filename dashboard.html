@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>폰드림 영업 현황판</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#0f1f3d; --navy2:#1a2f52; --blue:#1e56b0; --teal:#0d9e73;
+  --amber:#c97a1a; --red:#c93030; --gray:#8899aa; --light:#e8eef7;
+  --white:#fff; --bg:#f0f4fa; --card:#fff; --border:#d4dde8;
+  --text1:#0f1f3d; --text2:#445566; --text3:#8899aa;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text1);min-height:100vh}
+
+/* 사이드바 */
+.sidebar{position:fixed;left:0;top:0;width:220px;height:100vh;background:var(--navy);display:flex;flex-direction:column;z-index:100}
+.sidebar-logo{padding:28px 24px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar-logo .brand{font-size:18px;font-weight:700;color:#fff;letter-spacing:-.3px}
+.sidebar-logo .brand span{color:#5ba3f5}
+.sidebar-logo .sub{font-size:11px;color:rgba(255,255,255,.4);margin-top:3px;font-family:'JetBrains Mono',monospace}
+.sidebar-nav{flex:1;padding:16px 0;overflow-y:auto}
+.nav-section{font-size:10px;font-weight:700;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase;padding:12px 24px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 24px;color:rgba(255,255,255,.6);font-size:13px;cursor:pointer;transition:all .15s;border-left:3px solid transparent;text-decoration:none}
+.nav-item:hover{color:#fff;background:rgba(255,255,255,.05)}
+.nav-item.active{color:#fff;background:rgba(91,163,245,.12);border-left-color:#5ba3f5;font-weight:500}
+.nav-item .icon{width:16px;height:16px;opacity:.7;flex-shrink:0}
+.nav-item.active .icon{opacity:1}
+.sidebar-bottom{padding:16px 24px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:rgba(255,255,255,.3)}
+.last-updated{font-family:'JetBrains Mono',monospace}
+
+/* 메인 */
+.main{margin-left:220px;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-title{font-size:15px;font-weight:600;color:var(--navy)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.refresh-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:500;font-family:inherit;cursor:pointer;transition:background .15s}
+.refresh-btn:hover{background:var(--navy2)}
+.refresh-btn.loading{opacity:.7;pointer-events:none}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--teal)}
+.status-dot.error{background:var(--red)}
+.status-dot.loading{background:var(--amber);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.content{padding:28px 32px}
+
+/* 페이지 헤더 */
+.page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px}
+.page-header h1{font-size:22px;font-weight:700;color:var(--navy);letter-spacing:-.4px}
+.page-header .date-info{font-size:12px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.section-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+
+/* KPI 카드 */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.kpi-grid-3{grid-template-columns:repeat(3,1fr)}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s}
+.kpi-card:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(15,31,61,.08)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-card.blue::before{background:var(--blue)}
+.kpi-card.teal::before{background:var(--teal)}
+.kpi-card.amber::before{background:var(--amber)}
+.kpi-card.red::before{background:var(--red)}
+.kpi-label{font-size:11px;color:var(--text3);font-weight:500;margin-bottom:8px;letter-spacing:.02em}
+.kpi-value{font-size:26px;font-weight:700;color:var(--navy);font-family:'JetBrains Mono',monospace;letter-spacing:-1px;line-height:1;margin-bottom:6px}
+.kpi-value.negative{color:var(--red)}
+.kpi-sub{font-size:11px;color:var(--text3)}
+
+/* 전일/전월 비교 뱃지 */
+.kpi-compare{display:flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace}
+.kpi-compare.up{color:var(--teal)}
+.kpi-compare.down{color:var(--red)}
+.kpi-compare.flat{color:var(--gray)}
+.arrow-up{display:inline-block;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:6px solid var(--teal);margin-right:2px}
+.arrow-down{display:inline-block;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid var(--red);margin-right:2px}
+.arrow-flat{display:inline-block;width:8px;height:2px;background:var(--gray);margin-right:2px;vertical-align:middle}
+.compare-label{font-size:10px;font-weight:400;color:var(--text3);margin-left:2px}
+
+/* 진행률 카드 */
+.progress-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:28px}
+.progress-card-title{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:16px}
+.progress-row{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.progress-row:last-child{margin-bottom:0}
+.progress-label{font-size:12px;color:var(--text2);min-width:36px;font-weight:500}
+.progress-track{flex:1;height:6px;background:var(--light);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.fill-blue{background:var(--blue)}
+.fill-teal{background:var(--teal)}
+.fill-amber{background:var(--amber)}
+.progress-meta{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;min-width:80px;text-align:right}
+.progress-footer{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);display:flex;gap:24px}
+
+/* 하단 2열 */
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px}
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.table-card-header{padding:16px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--navy);display:flex;justify-content:space-between;align-items:center}
+.table-card-header .count{font-size:11px;color:var(--text3);font-weight:400;font-family:'JetBrains Mono',monospace}
+table{width:100%;border-collapse:collapse}
+th{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:10px 16px;text-align:left;background:#f7f9fc;border-bottom:1px solid var(--border)}
+td{font-size:12px;color:var(--text2);padding:11px 16px;border-bottom:1px solid #f0f4f8}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f7f9fc}
+td.mono{font-family:'JetBrains Mono',monospace}
+td.name{font-weight:500;color:var(--navy)}
+td.amount-pos{font-family:'JetBrains Mono',monospace;color:var(--teal);font-weight:600}
+td.amount-neg{font-family:'JetBrains Mono',monospace;color:var(--red);font-weight:600}
+
+/* 스켈레톤 */
+.skeleton{background:linear-gradient(90deg,#eef2f7 25%,#e0e8f0 50%,#eef2f7 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:4px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.sk-value{height:28px;width:70%;margin-bottom:6px}
+.sk-label{height:12px;width:50%}
+.empty-state{padding:32px;text-align:center;color:var(--text3);font-size:13px}
+.error-banner{background:#fde8e8;border:1px solid #f5c0c0;border-radius:8px;padding:12px 16px;font-size:13px;color:var(--red);margin-bottom:20px;display:none}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="brand">폰<span>드림</span></div>
+    <div class="sub">SALES DASHBOARD</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">메인</div>
+    <a class="nav-item active" onclick="showPage('dashboard',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v5H2V2zm7 0h5v5H9V2zM2 9h5v5H2V9zm7 0h5v5H9V9z"/></svg>
+      대시보드
+    </a>
+    <div class="nav-section">영업</div>
+    <a class="nav-item" onclick="showPage('sales',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M14 2H2a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V3a1 1 0 00-1-1zM2 13V5h12v8H2z"/></svg>
+      판매일보
+    </a>
+    <a class="nav-item" onclick="showPage('wireline',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11z"/></svg>
+      유선
+    </a>
+    <a class="nav-item" onclick="showPage('used',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2h8a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/></svg>
+      중고
+    </a>
+    <div class="nav-section">조회</div>
+    <a class="nav-item" onclick="showPage('search',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M10.5 9.5l3 3-1 1-3-3A5 5 0 112 7a5 5 0 018.5 2.5zm-1.1.6A4 4 0 107 11a4 4 0 002.4-1z"/></svg>
+      고객 검색
+    </a>
+    <a class="nav-item" onclick="showPage('settlement',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 4h12v1H2V4zm0 3h12v1H2V7zm0 3h8v1H2v-1z"/></svg>
+      거래처 정산
+    </a>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="last-updated" id="lastUpdated">— 업데이트 대기 중</div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <span class="topbar-title" id="pageTitle">대시보드</span>
+    <div class="topbar-right">
+      <div class="status-dot loading" id="statusDot"></div>
+      <button class="refresh-btn" id="refreshBtn" onclick="loadData()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 2.5A7 7 0 012 8H0l3 3 3-3H4a6 6 0 1011.09-2.5l-1.59 1A5 5 0 118 3V1l-3 3 3 3V5a4 4 0 011.5 7.5"/></svg>
+        새로고침
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="error-banner" id="errorBanner"></div>
+
+    <div id="page-dashboard">
+      <div class="page-header">
+        <h1>영업 현황</h1>
+        <div class="date-info" id="todayDate"></div>
+      </div>
+
+      <!-- 오늘 실적 + 전일 대비 -->
+      <div class="section-label">오늘 실적</div>
+      <div class="kpi-grid">
+        <div class="kpi-card blue">
+          <div class="kpi-label">오늘 총 마진</div>
+          <div class="kpi-value" id="kpi-today-margin">-</div>
+          <div class="kpi-sub" id="kpi-today-sub"></div>
+          <div class="kpi-compare flat" id="cmp-today-margin">
+            <span class="arrow-flat"></span><span>전일 데이터 로딩 중</span>
+          </div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">오늘 무선 건수</div>
+          <div class="kpi-value" id="kpi-today-wireless">-</div>
+          <div class="kpi-sub" id="kpi-today-wireless-sub"></div>
+          <div class="kpi-compare flat" id="cmp-today-wireless">
+            <span class="arrow-flat"></span><span>전일 대비</span>
+          </div>
+        </div>
+        <div class="kpi-card teal">
+          <div class="kpi-label">오늘 유선 건수</div>
+          <div class="kpi-value" id="kpi-today-wireline">-</div>
+          <div class="kpi-sub" id="kpi-today-wireline-sub"></div>
+          <div class="kpi-compare flat" id="cmp-today-wireline">
+            <span class="arrow-flat"></span><span>전일 대비</span>
+          </div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-label">건당 평균 마진</div>
+          <div class="kpi-value" id="kpi-today-avg">-</div>
+          <div class="kpi-sub">오늘 기준</div>
+          <div class="kpi-compare flat" id="cmp-today-avg">
+            <span class="arrow-flat"></span><span>전일 대비</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 당월 누적 + 전월 대비 -->
+      <div class="section-label">당월 누적</div>
+      <div class="kpi-grid kpi-grid-3">
+        <div class="kpi-card blue">
+          <div class="kpi-label">무선 실마진</div>
+          <div class="kpi-value" id="kpi-monthly-wireless">-</div>
+          <div class="kpi-sub" id="kpi-monthly-wireless-sub"></div>
+          <div class="kpi-compare flat" id="cmp-monthly-wireless">
+            <span class="arrow-flat"></span><span>전월 데이터 로딩 중</span>
+          </div>
+        </div>
+        <div class="kpi-card teal">
+          <div class="kpi-label">유선 마진</div>
+          <div class="kpi-value" id="kpi-monthly-wireline">-</div>
+          <div class="kpi-sub" id="kpi-monthly-wireline-sub"></div>
+          <div class="kpi-compare flat" id="cmp-monthly-wireline">
+            <span class="arrow-flat"></span><span>전월 대비</span>
+          </div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">최종 수익 (오퍼 반영)</div>
+          <div class="kpi-value" id="kpi-monthly-net">-</div>
+          <div class="kpi-sub" id="kpi-monthly-offer-sub"></div>
+          <div class="kpi-compare flat" id="cmp-monthly-net">
+            <span class="arrow-flat"></span><span>전월 대비</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 목표 달성률 -->
+      <div class="progress-card">
+        <div class="progress-card-title">목표 달성률</div>
+        <div class="progress-row">
+          <span class="progress-label">무선</span>
+          <div class="progress-track"><div class="progress-fill fill-blue" id="prog-wireless" style="width:0%"></div></div>
+          <span class="progress-meta" id="prog-wireless-meta">0 / 30건</span>
+        </div>
+        <div class="progress-row">
+          <span class="progress-label">유선</span>
+          <div class="progress-track"><div class="progress-fill fill-teal" id="prog-wireline" style="width:0%"></div></div>
+          <span class="progress-meta" id="prog-wireline-meta">0 / 30건</span>
+        </div>
+        <div class="progress-row">
+          <span class="progress-label">마진</span>
+          <div class="progress-track"><div class="progress-fill fill-amber" id="prog-margin" style="width:0%"></div></div>
+          <span class="progress-meta" id="prog-margin-meta">0%</span>
+        </div>
+        <div class="progress-footer">
+          <span id="days-remain">잔여 영업일 계산 중...</span>
+          <span id="daily-need">일평균 필요건수 계산 중...</span>
+        </div>
+      </div>
+
+      <!-- 최근 개통 목록 -->
+      <div class="bottom-grid">
+        <div class="table-card">
+          <div class="table-card-header">최근 무선 개통 <span class="count" id="wireless-count"></span></div>
+          <table><thead><tr><th>날짜</th><th>고객명</th><th>모델</th><th>마진</th></tr></thead>
+          <tbody id="wireless-tbody"><tr><td colspan="4" class="empty-state">로딩 중...</td></tr></tbody></table>
+        </div>
+        <div class="table-card">
+          <div class="table-card-header">최근 유선 개통 <span class="count" id="wireline-count"></span></div>
+          <table><thead><tr><th>접수일</th><th>고객명</th><th>상품</th><th>마진</th></tr></thead>
+          <tbody id="wireline-tbody"><tr><td colspan="4" class="empty-state">로딩 중...</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-sales"      style="display:none"><div class="empty-state" style="padding:60px">판매일보 — 준비 중</div></div>
+    <div id="page-wireline"   style="display:none"><div class="empty-state" style="padding:60px">유선 — 준비 중</div></div>
+    <div id="page-used"       style="display:none"><div class="empty-state" style="padding:60px">중고 — 준비 중</div></div>
+    <div id="page-search"     style="display:none"><div class="empty-state" style="padding:60px">고객 검색 — 준비 중</div></div>
+    <div id="page-settlement" style="display:none"><div class="empty-state" style="padding:60px">거래처 정산 — 준비 중</div></div>
+  </div>
+</main>
+
+<script>
+const SPREADSHEET_ID = '1zFtJhBY3zWLNolkKIJFd9MxEehOyvFJ4ShDlG8TSR8U';
+const API_KEY        = 'AIzaSyB1bzq8dWWlhCnuGirM3J2cq9dlhvQErAc';
+const TARGET_WIRELESS = 30;
+const TARGET_WIRELINE = 30;
+const TARGET_MARGIN   = 10000000;
+
+// ── 유틸 ──
+const won = n => {
+  const v = Math.round(Number(n)||0);
+  if (Math.abs(v) >= 10000) return (v/10000).toFixed(1)+'만';
+  return v.toLocaleString();
+};
+
+const toDateStr = v => {
+  const s = String(v||'').trim();
+  if (!s) return '';
+  // 2026-04-01 형식
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  // 2026. 4. 1 오전 12:00:00 형식
+  const m = s.match(/(\d{4})\.\ ?(\d{1,2})\.\ ?(\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  // 2026/04/01 형식
+  if (/^\d{4}\/\d/.test(s)) return s.slice(0,10).replace(/\//g,'-');
+  return s.slice(0,10);
+};
+
+const getYMD = (offset=0) => {
+  const d = new Date(); d.setDate(d.getDate()+offset);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+
+const getPrevMonth = () => {
+  const d = new Date();
+  d.setDate(1); d.setMonth(d.getMonth()-1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+};
+
+const getCurMonth = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+};
+
+// ── 비교 뱃지 렌더 ──
+function renderCompare(elId, current, previous, label, isWon=true) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (previous === null || previous === undefined) {
+    el.className = 'kpi-compare flat';
+    el.innerHTML = `<span class="arrow-flat"></span><span>${label} 없음</span>`;
+    return;
+  }
+  const diff = current - previous;
+  const pct  = previous !== 0 ? Math.abs((diff/previous)*100).toFixed(1) : null;
+  const diffStr = isWon ? won(Math.abs(diff))+'원' : Math.abs(diff)+'건';
+  const pctStr  = pct ? ` (${pct}%)` : '';
+
+  if (diff > 0) {
+    el.className = 'kpi-compare up';
+    el.innerHTML = `<span class="arrow-up"></span>+${diffStr}${pctStr}<span class="compare-label">${label} 대비</span>`;
+  } else if (diff < 0) {
+    el.className = 'kpi-compare down';
+    el.innerHTML = `<span class="arrow-down"></span>-${diffStr}${pctStr}<span class="compare-label">${label} 대비</span>`;
+  } else {
+    el.className = 'kpi-compare flat';
+    el.innerHTML = `<span class="arrow-flat"></span>변동 없음<span class="compare-label">${label} 대비</span>`;
+  }
+}
+
+// ── Sheets API ──
+async function fetchSheet(sheetName, range) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(sheetName+'!'+range)}?key=${API_KEY}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Sheets API 오류 ${res.status} — API 키를 확인하세요`);
+  return (await res.json()).values || [];
+}
+
+// ── 집계 함수 ──
+function calcWireless(rows, dateFilter) {
+  let margin=0, offer=0, cnt=0;
+  rows.forEach(row => {
+    const d = toDateStr(row[0]);
+    if (!d || d.length < 8) return;
+    if (dateFilter && !d.startsWith(dateFilter)) return;
+    margin += Number(row[65])||0;
+    offer  += Number(row[64])||0;
+    cnt++;
+  });
+  return { margin, offer, cnt };
+}
+
+function calcWireline(rows, dateFilter) {
+  let margin=0, cnt=0;
+  rows.forEach(row => {
+    const d = toDateStr(row[0]);
+    if (!d || d.length < 8) return;
+    if (dateFilter && !d.startsWith(dateFilter)) return;
+    // AT열 = F기준 인덱스 39
+    margin += Number(row[39])||0;
+    cnt++;
+  });
+  return { margin, cnt };
+}
+
+// ── 메인 로드 ──
+async function loadDashboard() {
+  try {
+    const salesRows = await fetchSheet('판매일보', 'C7:BP300');
+    const lineRows = [];
+
+    const todayStr    = getYMD(0);
+    const yestStr     = getYMD(-1);
+    const curMonth    = getCurMonth();
+    const prevMonth   = getPrevMonth();
+
+    const now        = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    const daysLeft    = daysInMonth - now.getDate();
+
+    // ── 오늘 / 전일 ──
+    const wToday = calcWireless(salesRows, todayStr);
+    const wYest  = calcWireless(salesRows, yestStr);
+    const lToday = calcWireline(lineRows,  todayStr);
+    const lYest  = calcWireline(lineRows,  yestStr);
+
+    const todayMargin = wToday.margin + lToday.margin;
+    const yestMargin  = wYest.margin  + lYest.margin;
+    const todayCnt    = wToday.cnt    + lToday.cnt;
+    const yestCnt     = wYest.cnt     + lYest.cnt;
+    const todayAvg    = todayCnt > 0 ? Math.round(todayMargin/todayCnt) : 0;
+    const yestAvg     = yestCnt  > 0 ? Math.round(yestMargin/yestCnt)  : 0;
+
+    // ── 당월 / 전월 ──
+    const wCur  = calcWireless(salesRows, curMonth);
+    const wPrev = calcWireless(salesRows, prevMonth);
+    const lCur  = calcWireline(lineRows,  curMonth);
+    const lPrev = calcWireline(lineRows,  prevMonth);
+
+    const curNet  = wCur.margin  + lCur.margin  + wCur.offer;
+    const prevNet = wPrev.margin + lPrev.margin + wPrev.offer;
+
+    // ── DOM 업데이트 ──
+    const set = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+
+    set('kpi-today-margin',    won(todayMargin)+'원');
+    set('kpi-today-sub',       `무선 ${won(wToday.margin)}원 + 유선 ${won(lToday.margin)}원`);
+    set('kpi-today-wireless',  wToday.cnt+'건');
+    set('kpi-today-wireline',  lToday.cnt+'건');
+    set('kpi-today-avg',       won(todayAvg)+'원');
+
+    set('kpi-monthly-wireless', won(wCur.margin)+'원');
+    set('kpi-monthly-wireless-sub', `${wCur.cnt}건 · 건당 ${won(wCur.cnt>0?Math.round(wCur.margin/wCur.cnt):0)}원`);
+    set('kpi-monthly-wireline', won(lCur.margin)+'원');
+    set('kpi-monthly-wireline-sub', `${lCur.cnt}건 · 건당 ${won(lCur.cnt>0?Math.round(lCur.margin/lCur.cnt):0)}원`);
+    set('kpi-monthly-net',      won(curNet)+'원');
+    set('kpi-monthly-offer-sub', `오퍼 ${won(wCur.offer)}원 반영`);
+
+    // ── 전일 대비 비교 ──
+    const hasYest = yestMargin > 0 || yestCnt > 0;
+    renderCompare('cmp-today-margin',   todayMargin, hasYest ? yestMargin : null, '전일', true);
+    renderCompare('cmp-today-wireless', wToday.cnt,  hasYest ? wYest.cnt  : null, '전일', false);
+    renderCompare('cmp-today-wireline', lToday.cnt,  hasYest ? lYest.cnt  : null, '전일', false);
+    renderCompare('cmp-today-avg',      todayAvg,    hasYest ? yestAvg    : null, '전일', true);
+
+    // ── 전월 대비 비교 ──
+    const hasPrev = wPrev.margin > 0 || lPrev.margin > 0;
+    renderCompare('cmp-monthly-wireless', wCur.margin,  hasPrev ? wPrev.margin  : null, '전월', true);
+    renderCompare('cmp-monthly-wireline', lCur.margin,  hasPrev ? lPrev.margin  : null, '전월', true);
+    renderCompare('cmp-monthly-net',      curNet,       hasPrev ? prevNet       : null, '전월', true);
+
+    // ── 달성률 ──
+    const wPct = Math.min(100, Math.round(wCur.cnt/TARGET_WIRELESS*100));
+    const lPct = Math.min(100, Math.round(lCur.cnt/TARGET_WIRELINE*100));
+    const mPct = Math.min(100, Math.round(curNet/TARGET_MARGIN*100));
+    document.getElementById('prog-wireless').style.width = wPct+'%';
+    document.getElementById('prog-wireline').style.width = lPct+'%';
+    document.getElementById('prog-margin').style.width   = mPct+'%';
+    set('prog-wireless-meta', `${wCur.cnt} / ${TARGET_WIRELESS}건`);
+    set('prog-wireline-meta', `${lCur.cnt} / ${TARGET_WIRELINE}건`);
+    set('prog-margin-meta',   `${mPct}%`);
+    set('days-remain',  `잔여 ${daysLeft}일`);
+    set('daily-need',   `일평균 필요: 무선 ${daysLeft>0?((TARGET_WIRELESS-wCur.cnt)/daysLeft).toFixed(1):'-'}건 · 유선 ${daysLeft>0?((TARGET_WIRELINE-lCur.cnt)/daysLeft).toFixed(1):'-'}건`);
+
+    // ── 최근 무선 테이블 ──
+    const wRecent = salesRows.filter(r=>r[9]).slice(-8).reverse();
+    set('wireless-count', wRecent.length+'건');
+    document.getElementById('wireless-tbody').innerHTML = wRecent.length===0
+      ? '<tr><td colspan="4" class="empty-state">데이터 없음</td></tr>'
+      : wRecent.map(r => {
+          const m = Number(r[65])||0;
+          return `<tr>
+            <td class="mono">${toDateStr(r[0]).slice(5)}</td>
+            <td class="name">${r[9]||''}</td>
+            <td>${r[12]||''}</td>
+            <td class="${m<0?'amount-neg':'amount-pos'}">${m.toLocaleString()}</td>
+          </tr>`;
+        }).join('');
+
+    // ── 최근 유선 테이블 ──
+    const lRecent = lineRows.filter(r=>r[6]).slice(-8).reverse();
+    set('wireline-count', lRecent.length+'건');
+    document.getElementById('wireline-tbody').innerHTML = lRecent.length===0
+      ? '<tr><td colspan="4" class="empty-state">데이터 없음</td></tr>'
+      : lRecent.map(r => {
+          const m = Number(r[39])||0;
+          return `<tr>
+            <td class="mono">${toDateStr(r[0]).slice(5)}</td>
+            <td class="name">${r[6]||''}</td>
+            <td>${r[12]||''}</td>
+            <td class="${m<0?'amount-neg':'amount-pos'}">${m.toLocaleString()}</td>
+          </tr>`;
+        }).join('');
+
+    document.getElementById('statusDot').className = 'status-dot';
+    document.getElementById('lastUpdated').textContent =
+      new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+' 업데이트';
+    document.getElementById('refreshBtn').classList.remove('loading');
+
+  } catch(e) {
+    const b = document.getElementById('errorBanner');
+    b.style.display = 'block';
+    b.textContent = `데이터 로드 실패: ${e.message}`;
+    document.getElementById('statusDot').className = 'status-dot error';
+    document.getElementById('refreshBtn').classList.remove('loading');
+  }
+}
+
+// ── 페이지 전환 ──
+const titles = {dashboard:'대시보드',sales:'판매일보',wireline:'유선',used:'중고',search:'고객 검색',settlement:'거래처 정산'};
+function showPage(name, el) {
+  ['dashboard','sales','wireline','used','search','settlement'].forEach(p => {
+    document.getElementById('page-'+p).style.display = p===name?'':'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.getElementById('pageTitle').textContent = titles[name]||name;
+}
+
+async function loadData() {
+  document.getElementById('refreshBtn').classList.add('loading');
+  document.getElementById('statusDot').className = 'status-dot loading';
+  await loadDashboard();
+}
+
+document.getElementById('todayDate').textContent =
+  new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+
+window.addEventListener('load', loadData);
+setInterval(loadData, 5*60*1000);
+</script>
+</body>
+</html>
